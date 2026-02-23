@@ -1,56 +1,73 @@
-# WhatsApp Chatbot Webhook Setup Guide
+# WhatsApp ↔ GraphRAG Webhook Gateway
 
-Follow these steps to connect your chatbot to WhatsApp.
+This repository contains a dedicated webhook server designed to connect the Meta WhatsApp Cloud API to a GraphRAG-powered AI backend. It securely receives incoming WhatsApp messages, parses the payload, and forwards the queries to your core AI Agent API for processing.
 
-## Step 1: Install Dependencies
+## 🚀 Features
+- **Secure Webhook Verification**: Automatically handles Meta's `hub.challenge` verification process.
+- **Message Routing**: Parses incoming WhatsApp payloads and extracts the text, sender number, and timestamp.
+- **GraphRAG Integration**: Acts as a lightweight middleman to pass messages to your central GraphRAG API (e.g., `zappies-central-api`).
+- **Async Ready**: Designed to quickly acknowledge receipt to Meta (preventing timeouts) while processing the AI response asynchronously.
 
-Open your terminal in the project directory and run:
-```bash
+## 🛠️ Prerequisites
+
+1. Python 3.8+
+2. A Meta Developer Account with a configured WhatsApp Business App.
+3. Your core GraphRAG API running (the main bot template).
+4. ngrok (https://ngrok.com/download) (for exposing the local webhook to the internet).
+
+## ⚙️ Setup Instructions
+
+### Step 1: Install Dependencies
+Open your terminal in the project directory and install the required packages:
+
 pip install -r requirements.txt
-```
 
-## Step 2: Update Your `.env` File
 
-Copy your credentials from the Meta for Developers dashboard into the `.env` file you created.
-- `WHATSAPP_TOKEN`: The temporary or permanent access token.
-- `PHONE_NUMBER_ID`: Found directly below the access token field.
-- `VERIFY_TOKEN`: Make up a secure string. You will use this in the dashboard.
+### Step 2: Configure Environment Variables
+Create a `.env` file in the root directory and add your credentials:
 
-## Step 3: Run Your Services
+# Meta WhatsApp Credentials
+WHATSAPP_TOKEN=your_meta_access_token
+PHONE_NUMBER_ID=your_whatsapp_phone_number_id
+VERIFY_TOKEN=your_secure_custom_verify_token
 
-You need to run three separate processes in three different terminal windows.
+# Your GraphRAG Backend URL
+GRAPH_RAG_API_URL=http://localhost:8000/chat
 
-**Terminal 1: Start your Chatbot API**
-```bash
-uvicorn api:app --host 0.0.0.0 --port 8000
-```
+
+### Step 3: Run the Services
+To test this locally, you will need to run your webhook server, expose it, and ensure your GraphRAG backend is running.
+
+**Terminal 1: Start your GraphRAG API Backend**
+*(This should be your main AI API repository)*
+
+uvicorn api.server:app --host 0.0.0.0 --port 8000
+
 
 **Terminal 2: Start the Webhook Server**
-```bash
+
 python webhook.py
-```
-This server will now be running locally on port 5001.
 
-**Terminal 3: Expose Your Webhook with ngrok**
+*(The webhook server defaults to port 5001).*
 
-[Download ngrok](https://ngrok.com/download) if you haven't already.
-```bash
-# This command exposes your local port 5001 to the internet.
+**Terminal 3: Expose the Webhook with ngrok**
+
 ngrok http 5001
-```
-ngrok will provide a public HTTPS URL (e.g., `https://random-string.ngrok-free.app`). **Copy this URL.**
 
-## Step 4: Configure the Webhook in Meta for Developers
+*Copy the HTTPS URL provided by ngrok (e.g., `https://your-domain.ngrok-free.app`).*
 
-1.  Go to your app's dashboard on [Meta for Developers](https://developers.facebook.com/).
-2.  Navigate to **WhatsApp -> API Setup**.
-3.  Under "Step 2: Configure webhook", click **Edit**.
-4.  **Callback URL:** Paste the `https` URL from ngrok and add `/webhook` to the end.
-    -   Example: `https://random-string.ngrok-free.app/webhook`
-5.  **Verify token:** Enter the exact same string you used for `VERIFY_TOKEN` in your `.env` file.
-6.  Click **Verify and save**. You should see a success message.
-7.  Next to the webhook section, click **Manage** and subscribe to the `messages` event.
+## 🔗 Connect to Meta WhatsApp API
 
-## Step 5: Test It!
+1. Go to your app's dashboard on Meta for Developers (https://developers.facebook.com/).
+2. Navigate to **WhatsApp -> Configuration**.
+3. Under the Webhook section, click **Edit**.
+4. **Callback URL:** Paste your ngrok URL and append `/webhook` (e.g., `https://your-domain.ngrok-free.app/webhook`).
+5. **Verify Token:** Enter the exact same `VERIFY_TOKEN` you set in your `.env` file.
+6. Click **Verify and save**.
+7. Click **Manage** under Webhook fields and subscribe to the `messages` event.
 
-Use the "API Setup" page to send a test message to your configured phone number, or simply message the number from WhatsApp. Check the terminal running `webhook.py` to see the incoming message being processed.
+## 🧪 Testing the Pipeline
+Send a message to your configured WhatsApp test number. 
+1. The webhook server (`webhook.py`) should log the incoming payload.
+2. It will forward the text to your GraphRAG API (`localhost:8000`).
+3. Your GraphRAG agent will generate a response and send it back to the user on WhatsApp.
