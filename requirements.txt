@@ -1,9 +1,4 @@
-# For the FastAPI server (api.py)
-fastapi
-uvicorn[standard]
-pydantic
-
-# For the Flask webhook (webhook.py)
 flask
 requests
 python-dotenv
+gunicorn

@@ -1,0 +1,23 @@
+# Version Control Systems
+.git
+.gitignore
+.github/
+
+# Local Environment Sandboxes
+.venv
+venv/
+env/
+ENV/
+.env
+
+# Python Compilation Cache Layers
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Quality Assurance & Tooling Caches
+.pytest_cache/
+.ruff_cache/
+.vscode/
+.idea/
