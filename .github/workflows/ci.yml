@@ -1,0 +1,43 @@
+name: Gateway Webhook Pipeline CI
+
+# Trigger the automated quality gates on branch code pushes or pull requests
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  pipeline-validation:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Checkout the source code from the target repository branch
+    - name: Checkout Codebase Source
+      uses: actions/checkout@v4
+
+    # 2. Instantiate a pure Python 3.11 testing container sandbox
+    - name: Setup Python 3.11 Environment
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip' # Leverages global pip caching for accelerated future builds
+
+    # 3. Process the stripped requirement sheet, then inject the static checking engines
+    - name: Install Architecture Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+        python -m pip install --upgrade pathspec black ruff pytest
+
+    # 4. Verify absolute PEP 8 code alignment
+    - name: Verify Layout Alignment (Black Check)
+      run: python -m black --check .
+
+    # 5. Audit code structures for hidden bugs, circular dependencies, or dead code layers
+    - name: Static Syntax Compilation Audit (Ruff Check)
+      run: python -m ruff check .
+
+    # 6. Execute the verification tests to confirm request handler integrity
+    - name: Run Gateway Unit Tests (Pytest Runner)
+      run: python -m pytest
