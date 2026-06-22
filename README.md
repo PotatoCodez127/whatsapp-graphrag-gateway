@@ -1,73 +1,75 @@
-# WhatsApp ↔ GraphRAG Webhook Gateway
+# 🌐 WhatsApp ↔ GraphRAG Webhook Edge Gateway
 
-This repository contains a dedicated webhook server designed to connect the Meta WhatsApp Cloud API to a GraphRAG-powered AI backend. It securely receives incoming WhatsApp messages, parses the payload, and forwards the queries to your core AI Agent API for processing.
+An enterprise-grade, asynchronous webhook gateway microservice designed to bridge the Meta WhatsApp Cloud API with a centralized GraphRAG-powered AI backend engine. Built using Flask, Gunicorn, and multi-threaded processing pools to handle high-throughput message routing under strict server response deadlines.
 
-## 🚀 Features
-- **Secure Webhook Verification**: Automatically handles Meta's `hub.challenge` verification process.
-- **Message Routing**: Parses incoming WhatsApp payloads and extracts the text, sender number, and timestamp.
-- **GraphRAG Integration**: Acts as a lightweight middleman to pass messages to your central GraphRAG API (e.g., `zappies-central-api`).
-- **Async Ready**: Designed to quickly acknowledge receipt to Meta (preventing timeouts) while processing the AI response asynchronously.
+## ⚡ Key Architectural Features
 
-## 🛠️ Prerequisites
+### 1. Asynchronous Acknowledgment Deadlines
+Meta's WhatsApp Cloud API requires webhook targets to respond with an HTTP `200 OK` status code within standard sub-second window parameters to prevent event retry loops. 
+- **The Solution:** This gateway instantly detaches incoming network payloads into an isolated background worker thread (`threading.Thread`) to manage the underlying GraphRAG API inference requests and text deliveries. 
+- **The Result:** The main request routing handler returns an immediate `200 OK` acknowledgment back to Meta's edge nodes, eliminating duplicate webhook event deliveries and server load spikes.
 
-1. Python 3.8+
-2. A Meta Developer Account with a configured WhatsApp Business App.
-3. Your core GraphRAG API running (the main bot template).
-4. ngrok (https://ngrok.com/download) (for exposing the local webhook to the internet).
+### 2. Isolated Token Handshaking & Security
+Features built-in endpoint verification logic that automatically intercepts and parses Meta's explicit setup sequences (`hub.mode`, `hub.challenge`, and `hub.verify_token`), protecting your internal downstream AI nodes from unauthorized query spoofing or scanning attempts.
 
-## ⚙️ Setup Instructions
+### 3. Lean Microservice Footprint
+Optimized down to a minimalist production footprint. All unneeded dependency bloat (such as development async routers) has been pruned, moving execution to **Gunicorn**—the industry-standard, multi-worker Unix WSGI server.
 
-### Step 1: Install Dependencies
-Open your terminal in the project directory and install the required packages:
+## 🛠️ Tech Stack
+- **Core Engine:** Python, Flask
+- **Networking Layer:** Requests, Gunicorn
+- **Quality Assurance:** Pytest, Black, Ruff
+- **Infrastructure:** Docker, GitHub Actions Continuous Integration
 
+## 🧹 Code Quality & Standards
+Development pipelines and validation styles are configured centrally via the root `pyproject.toml` hub:
+- **Black:** Governs PEP 8 whitespace layout stability and consistency across modules.
+- **Ruff:** Executes static syntax compilation audits, structural error monitoring, and enforces explicit first-party Isort import sorting constraints.
+
+To check and format code locally:
+```bash
+python -m black .
+python -m ruff check . --fix
+```
+
+## ⚙️ Setup & Deployment Guide
+
+### Option A: Local Enterprise Installation
+1. Clone the repository and install the production-grade dependency sheet:
+```bash
+git clone [https://github.com/PotatoCodez127/whatsapp-graphrag-gateway.git](https://github.com/PotatoCodez127/whatsapp-graphrag-gateway.git)
+cd whatsapp-graphrag-gateway
 pip install -r requirements.txt
+```
 
-
-### Step 2: Configure Environment Variables
-Create a `.env` file in the root directory and add your credentials:
-
-# Meta WhatsApp Credentials
+2. Configure environmental variables by creating a secure .env file at the root:
+```bash
 WHATSAPP_TOKEN=your_meta_access_token
 PHONE_NUMBER_ID=your_whatsapp_phone_number_id
-VERIFY_TOKEN=your_secure_custom_verify_token
+VERIFY_TOKEN=your_custom_secure_handshake_verify_token
+CHATBOT_API_URL=[https://your-central-graphrag-api.com/chat](https://your-central-graphrag-api.com/chat)
+API_SECRET_KEY=your_secure_downstream_brain_api_key
+```
 
-# Your GraphRAG Backend URL
-GRAPH_RAG_API_URL=http://localhost:8000/chat
+3. Run the local verification unit tests to confirm router handler integrity:
+```bash
+python -m pytest
+```
 
+### Option B: Containerized Production Isolation (Recommended)
+This service includes a production-grade multi-threaded container blueprint to completely remove local system dependency drift.
 
-### Step 3: Run the Services
-To test this locally, you will need to run your webhook server, expose it, and ensure your GraphRAG backend is running.
+1. Build the lean, isolated Linux-slim runtime image:
+```bash
+docker build -t whatsapp-graphrag-gateway .
+```
 
-**Terminal 1: Start your GraphRAG API Backend**
-*(This should be your main AI API repository)*
+2. Fire up the application container, binding Gunicorn workers natively to production port 5001:
+```bash
+docker run -d -p 5001:5001 --env-file .env --name gateway-instance whatsapp-graphrag-gateway
+```
 
-uvicorn api.server:app --host 0.0.0.0 --port 8000
+## 🤖 Continuous Integration (CI/CD)
+Automated testing and code validation gates are executed natively via GitHub Actions (.github/workflows/ci.yml). Every single commit or merge pull request opened against tracking branches spins up an isolated Ubuntu build node that triggers comprehensive dependency resolution, strict Black visual compliance checks, Ruff compilation audits, and runs your pytest suite to guarantee absolute gateway routing health before deployment.
 
-
-**Terminal 2: Start the Webhook Server**
-
-python webhook.py
-
-*(The webhook server defaults to port 5001).*
-
-**Terminal 3: Expose the Webhook with ngrok**
-
-ngrok http 5001
-
-*Copy the HTTPS URL provided by ngrok (e.g., `https://your-domain.ngrok-free.app`).*
-
-## 🔗 Connect to Meta WhatsApp API
-
-1. Go to your app's dashboard on Meta for Developers (https://developers.facebook.com/).
-2. Navigate to **WhatsApp -> Configuration**.
-3. Under the Webhook section, click **Edit**.
-4. **Callback URL:** Paste your ngrok URL and append `/webhook` (e.g., `https://your-domain.ngrok-free.app/webhook`).
-5. **Verify Token:** Enter the exact same `VERIFY_TOKEN` you set in your `.env` file.
-6. Click **Verify and save**.
-7. Click **Manage** under Webhook fields and subscribe to the `messages` event.
-
-## 🧪 Testing the Pipeline
-Send a message to your configured WhatsApp test number. 
-1. The webhook server (`webhook.py`) should log the incoming payload.
-2. It will forward the text to your GraphRAG API (`localhost:8000`).
-3. Your GraphRAG agent will generate a response and send it back to the user on WhatsApp.
+---
