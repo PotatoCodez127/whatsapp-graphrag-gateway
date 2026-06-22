@@ -1,6 +1,7 @@
 # tests/test_webhook.py
 
 import pytest
+
 import webhook
 from webhook import app
 
